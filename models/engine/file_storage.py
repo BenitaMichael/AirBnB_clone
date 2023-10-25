@@ -1,59 +1,65 @@
 #!/usr/bin/python3
-"""Module for Airbnb Clone FileStorage class"""
+"""The file storage module"""
 
-import os
 import json
+import os
+import models
+from models.base_model import BaseModel
+from models.user import User
+from models.state import State
+from models.city import City
+from models.place import Place
+from models.amenity import Amenity
+from models.review import Review
+
 
 class FileStorage:
-    """Class for storing and retrieving data
-    Class Methods:
-        all: Returns the object (dictionary object)
-        new: updates the object id
-        save: Converts Python objects into JSON strings
-        reload: Converts JSON strings into Python objects
-    Class Attributes:
-        __file_path (str): The name of the file objects are saved to
-        __objects (dict): A dictionary of instantiated objects
-        class_dict (dict): A dictionary of all the classes
-    """
+    """File storage module"""
+
     __file_path = "file.json"
     __objects = {}
 
     def all(self):
-        """Returns the dictionary __objects: object instance"""
+        """returns all objects"""
         return FileStorage.__objects
 
     def new(self, obj):
-        """sets in __objects the obj with key <obj class name>.id"""
-        key = "{}.{}".format(type(obj).__name__, obj.id)
-        FileStorage.__objects[key] = obj
+        """sets a new obj"""
+        FileStorage.__objects["{}.{}".format(type(obj).__name__, obj.id)] = obj
 
     def save(self):
-        """Converts __objects to the JSON file"""
-        with open(FileStorage.__file_path, "w", encoding="utf-8") as f:
-            d = {k: v.to_dict() for k, v in FileStorage.__objects.items()}
-            json.dump(d, f)
+        """saves a new obj"""
+        objects = FileStorage.__objects
+        file = FileStorage.__file_path
+        content = {}
 
-    def classes(self):
-        """Returns classes and their respective refs"""
-        from models.base_model import BaseModel
-        from models.amenity import Amenity
-        from models.city import City
-        from models.place import Place
-        from models.review import Review
-        from models.state import State
-        from models.user import User
+        for key, value in objects.items():
+            content[key] = value.to_dict()
 
-        classes = {"BaseModel": BaseModel, "Amenity": Amenity, "City": City,
-                   "Place": Place, "Review": Review, "State": State, "User": User}
-        return classes
+        with open(file, 'w', encoding="utf-8") as f:
+            return f.write(json.dumps(content))
 
     def reload(self):
-        """Reloads objects if exists and stored"""
-        if not os.path.isfile(FileStorage.__file_path):
-            return
-        with open(FileStorage.__file_path, "r", encoding="utf-8") as f:
-            obj_dict = json.load(f)
-            obj_dict = {key: self.classes()[value["__class__"]](**value)
-            for key, value in obj_dict.items()}
-            FileStorage.__objects = obj_dict
+        """reloads from a json file"""
+
+        file = FileStorage.__file_path
+        # classes = models.classes
+
+        if os.path.isfile(file):
+            with open(file, 'r', encoding="utf-8") as f:
+                content = f.read()
+                formattedContent = json.loads(content)
+
+                for value in formattedContent.values():
+                    class_name = value["__class__"]
+                    # self.new(classes[class_name](**value))
+                    self.new(eval(class_name)(**value))
+
+    def update(self, key, attr, value):
+        """updates an instance"""
+        model = FileStorage.__objects[key]
+        setattr(model, attr, value)
+
+    def delete(self, key):
+        """deletes an instance"""
+        del FileStorage.__objects[key]
